@@ -339,11 +339,11 @@ class SOLOv2(nn.Module):
 
     @staticmethod
     def split_feats(feats):
-        return (F.interpolate(feats[0], scale_factor=0.5, mode='bilinear'),
+        return (F.interpolate(feats[0], scale_factor=0.5, mode='bilinear', align_corners=False, recompute_scale_factor=False),
                 feats[1],
                 feats[2],
                 feats[3],
-                F.interpolate(feats[4], size=feats[3].shape[-2:], mode='bilinear'))
+                F.interpolate(feats[4], size=feats[3].shape[-2:], mode='bilinear', align_corners=False))
 
 
     def inference(self, pred_cates, pred_kernels, pred_masks, cur_sizes, images):
@@ -482,10 +482,10 @@ class SOLOv2(nn.Module):
         # reshape to original size.
         seg_preds = F.interpolate(seg_preds.unsqueeze(0),
                                   size=upsampled_size_out,
-                                  mode='bilinear')[:, :, :h, :w]
+                                  mode='bilinear', align_corners=False)[:, :, :h, :w]
         seg_masks = F.interpolate(seg_preds,
                                   size=ori_size,
-                                  mode='bilinear').squeeze(0)
+                                  mode='bilinear', align_corners=False).squeeze(0)
         seg_masks = seg_masks > self.mask_threshold
 
         results = Instances(ori_size)
@@ -606,7 +606,7 @@ class SOLOv2InsHead(nn.Module):
             # concat coord
             x_range = torch.linspace(-1, 1, ins_kernel_feat.shape[-1], device=ins_kernel_feat.device)
             y_range = torch.linspace(-1, 1, ins_kernel_feat.shape[-2], device=ins_kernel_feat.device)
-            y, x = torch.meshgrid(y_range, x_range)
+            y, x = torch.meshgrid(y_range, x_range, indexing="ij")
             y = y.expand([ins_kernel_feat.shape[0], 1, -1, -1])
             x = x.expand([ins_kernel_feat.shape[0], 1, -1, -1])
             coord_feat = torch.cat([x, y], 1)
@@ -615,7 +615,7 @@ class SOLOv2InsHead(nn.Module):
             # individual feature.
             kernel_feat = ins_kernel_feat
             seg_num_grid = self.num_grids[idx]
-            kernel_feat = F.interpolate(kernel_feat, size=seg_num_grid, mode='bilinear')
+            kernel_feat = F.interpolate(kernel_feat, size=seg_num_grid, mode='bilinear', align_corners=False)
             cate_feat = kernel_feat[:, :-2, :, :]
 
             # kernel
@@ -732,7 +732,7 @@ class SOLOv2MaskHead(nn.Module):
             if i == 3:  # add for coord.
                 x_range = torch.linspace(-1, 1, mask_feat.shape[-1], device=mask_feat.device)
                 y_range = torch.linspace(-1, 1, mask_feat.shape[-2], device=mask_feat.device)
-                y, x = torch.meshgrid(y_range, x_range)
+                y, x = torch.meshgrid(y_range, x_range, indexing="ij")
                 y = y.expand([mask_feat.shape[0], 1, -1, -1])
                 x = x.expand([mask_feat.shape[0], 1, -1, -1])
                 coord_feat = torch.cat([x, y], 1)

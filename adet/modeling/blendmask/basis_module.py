@@ -95,7 +95,7 @@ class ProtoNet(nn.Module):
             # resize target to reduce memory
             gt_sem = targets.unsqueeze(1).float()
             gt_sem = F.interpolate(
-                gt_sem, scale_factor=1 / self.common_stride)
+                gt_sem, scale_factor=1 / self.common_stride, recompute_scale_factor=False)
             seg_loss = F.cross_entropy(
                 sem_out, gt_sem.squeeze(1).long())
             losses['loss_basis_sem'] = seg_loss * self.sem_loss_weight
